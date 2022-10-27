@@ -35,7 +35,7 @@ Route::get('/economic', function (Request $request) {
             array_push($result,[
                 "numero" => $data[0],
                 "velocidad" => $data[1],
-                "fecha" => $data[2],
+                "hora" => explode(" ", $data[2])[1],
                 "sentido" => $data[3] == 1 ? "ida" : "regreso",
                 "latitud" => $data[4],
                 "longitud" => $data[5],

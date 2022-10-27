@@ -27,15 +27,18 @@
       </div>
         <v-map class="w-full h-full" :options="state.map" @loaded="onMapLoaded">
           <template v-if="loaded">
+            <!-- <VControlNavigation position="top-right" :options="{showCompass: true,showZoom: true, visualizePitch: true}"/> -->
             <v-marker v-for="(marker, idx) in markers" :key="idx" :coordinates="marker.coordinates" :options="marker.options"
-              :popup-options="marker.popup">
+              :popup-options="marker.popup.options">
               <template>
-                <div class="p-2 text-black">
-                  Popup Content: {{ marker.popup.content }}
-                  <img class="rounded shadow-sm" src="https://picsum.photos/200" />
+                <div class="p-3">
+                  <p><span class="font-bold">Economico:</span> {{ marker.popup.numero }}</p>
+                  <p><span class="font-bold">Hora:</span> {{ marker.popup.hora }}</p>
+                  <p><span class="font-bold">Sentido:</span> {{ marker.popup.sentido }}</p>
                 </div>
               </template>
             </v-marker>
+            <VLayerDeckGeojson v-if="deck.geojson.source.features[0].geometry.coordinates" :data="deck.geojson.source" :layer-id="'deck.gl-geojson-layer'" :options="deck.geojson.options"/>
           </template>
         </v-map>
     </div>
@@ -52,7 +55,7 @@
 
 <script setup>
 import axios from "axios";
-import { VMap, VMarker } from "v-mapbox";
+import { VMap, VMarker, VLayerDeckGeojson, VControlNavigation } from "v-mapbox";
 import { reactive, computed, ref } from "vue";
 
 const state = reactive({
@@ -75,6 +78,86 @@ const state = reactive({
     hash: false,
     minPitch: 0,
     maxPitch: 60,
+  },
+});
+
+const geoJsonSource = {
+  'id': 'route',
+  'type': 'geojson',
+  'data': {
+    'type': 'Feature',
+    'properties': {},
+    'geometry': {
+      'type': 'LineString',
+      'coordinates': [
+        [-100.286455068109, 25.6506166592275],
+        [-100.289997430754, 25.6479278305147],
+        [-100.292101623294, 25.6511887244147],
+        [-100.292137637195, 25.6515898509034],
+        [-100.292424851361, 25.6517810641469],
+        [-100.296576579111, 25.6583615154629],
+        [-100.297088859472, 25.6599875152764],
+        [-100.297193526405, 25.6663642653212],
+        [-100.298706025688, 25.6692154658673],
+        [-100.298249021225, 25.6720864005858],
+        [-100.298543191981, 25.6721031861682],
+        [-100.299092181543, 25.6689029685078],
+        [-100.299867878994, 25.6682549442251],
+        [-100.30389192241, 25.6659674345714],
+        [-100.305832632835, 25.6644094945316],
+        [-100.307517097689, 25.6637173326199],
+        [-100.309845142796, 25.6634467799376],
+        [-100.315832822021, 25.6647663287149],
+        [-100.315980426615, 25.6653211370305],
+        [-100.315744686648, 25.6663877216769],
+        [-100.313075750692, 25.6858990017778]
+      ]
+    }
+  }
+}
+const geoJsonLayer = {
+  'type': 'line',
+  'source': 'route',
+  'layout': {
+    'line-join': 'round',
+    'line-cap': 'round'
+  },
+  'paint': {
+    'line-color': '#888',
+    'line-width': 8
+  }
+}
+
+const deck = ref({
+  geojson: {
+    source: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [-100.286455068109, 25.6506166592275],
+            ],
+          },
+        },
+      ],
+    },
+    options: {
+      pickable: true,
+      stroked: false,
+      filled: true,
+      extruded: true,
+      pointType: "circle",
+      lineWidthScale: 20,
+      lineWidthMinPixels: 2,
+      getFillColor: [33, 160, 180, 200],
+      getPointRadius: 100,
+      getLineWidth: 1,
+      getElevation: 200,
+    },
   },
 });
 
@@ -122,14 +205,22 @@ const getData = async (id) => {
           closeOnClick: true,
           closeOnMove: true,
         },
-        content: "ABC",
+        numero: value.numero,
+        hora: value.hora,
+        sentido: value.sentido
       },
     }
 
     results.push(data)
   })
   markers.value = results
-  console.log(results);
+
+  const response = await axios.get(`/api/route?id=${id}`)
+  let coordinates = []
+  response.data.forEach((value,index) => {
+    coordinates.push([value.longitud,value.latitud])
+    deck.value.geojson.source.features.at(0).geometry.coordinates = coordinates
+  })
 }
 </script>
 
